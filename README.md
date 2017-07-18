@@ -1,1 +1,1 @@
-# purescript-frontmatters-yaml
+# purescript-frontmatter-yaml
