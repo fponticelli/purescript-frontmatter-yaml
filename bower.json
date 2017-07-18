@@ -1,5 +1,20 @@
 {
   "name": "purescript-frontmatters-yaml",
+  "authors": [
+    "Franco Ponticelli <franco.ponticelli@gmail.com>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/purescript-frontmatters-yaml.git"
+  },
+  "description": "FrontMatters (yaml) parser and writer for purescript",
+  "keywords": [
+    "purescript",
+    "frontmatters",
+    "yaml"
+  ],
+  "license": "MIT",
+  "homepage": "git://github.com/purescript-frontmatters-yaml.git",
   "ignore": [
     "**/.*",
     "node_modules",
