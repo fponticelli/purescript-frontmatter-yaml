@@ -1,5 +1,7 @@
 {
   "private": true,
+  "name": "purescript-frontmatter-yaml",
+  "version": "1.0.0",
   "scripts": {
     "clean": "rimraf output && rimraf .pulp-cache",
     "build": "pulp build -- --censor-lib --strict",
