@@ -46,6 +46,11 @@ main = runTest do
       testDotsEnding
     test "roundtrip yamlSeparator" do
       testYamlSeparator
+  suite "complex cases" do
+    test "yaml containing folded/wrapped text" do
+      testWrappedText
+    test "yaml containing dashes separators" do
+      testDashesSeparator
 
 assertRoundtripFrontMatter :: ∀ te. TitleAndDescription -> String -> Test te
 assertRoundtripFrontMatter inst text =
@@ -82,6 +87,34 @@ testYamlSeparator =
       { title: "I couldn't think of a better name"
       , description: "Just an example of using `= yaml =`"
       , content: "\nPlays nice with markdown syntax highlighting" } decoded
+
+testWrappedText :: ∀ e. Test e
+testWrappedText =
+  let decoded = decodeFrontMatter wrappedText :: Either String (FrontMatterValue WrappedText)
+  in
+    case decoded of
+        Right (FrontMatterValue { attributes: WrappedText {title, description, tags, foldedText, wrappedText} , content }) -> do
+          equal "Complex yaml example" title
+          equal "You can use the front-matter module to convert this" description
+          equal ["example", "yaml", "node"] tags
+          equal "There once was a man from Darjeeling\nWho got on a bus bound for Ealing\n    It said on the door\n    \"Please don't spit on the floor\"\nSo he carefully spat on the ceiling\n" foldedText
+          equal "Wrapped text will be folded into a single paragraph\nBlank lines denote paragraph breaks\n" wrappedText
+          equal "\nSome crazy stuff going on up there ^^" content
+        Left e ->
+          failure $ "unable to decode: " <> e
+
+testDashesSeparator :: ∀ e. Test e
+testDashesSeparator =
+  let decoded = decodeFrontMatter dashesSeparator :: Either String (FrontMatterValue DashesSeparator)
+  in
+    case decoded of
+        Right (FrontMatterValue { attributes: DashesSeparator {title, expandedDescription, tags} , content }) -> do
+          equal "Three dashes marks the spot" title
+          equal "with some --- crazy stuff in it" expandedDescription
+          equal ["yaml", "front-matter", "dashes"] tags
+          equal "\ndon't break\n\n---\n\nAlso this shouldn't be a problem" content
+        Left e ->
+          failure $ "unable to decode: " <> e
 
 -- TitleAndDescription
 
@@ -126,6 +159,52 @@ derive instance eqTitle :: Eq Title
 instTitle :: Title
 instTitle = Title { title: "Relax guy, I'm not hiding any BOMs" }
 
+-- WrappedText
+
+newtype WrappedText = WrappedText { title :: String, description :: String, tags :: Array String, foldedText :: String, wrappedText :: String }
+
+instance encodeWrappedText :: EncodeJson WrappedText where
+  encodeJson (WrappedText td)
+    = "title" := td.title
+   ~> "description" := td.description
+   ~> "tags" := td.tags
+   ~> "folded-text" := td.foldedText
+   ~> "wrapped-text" := td.wrappedText
+   ~> jsonEmptyObject
+
+instance decodeWrappedText :: DecodeJson WrappedText where
+  decodeJson json = do
+    obj <- decodeJson json
+    title <- obj .? "title"
+    description <- obj .? "description"
+    tags <- obj .? "tags"
+    foldedText <- obj .? "folded-text"
+    wrappedText <- obj .? "wrapped-text"
+    pure $ WrappedText { title, description, tags, foldedText, wrappedText }
+
+derive instance eqWrappedText :: Eq WrappedText
+
+-- dashesSeparator
+
+newtype DashesSeparator = DashesSeparator { title :: String, expandedDescription :: String, tags :: Array String }
+
+instance encodeDashesSeparator :: EncodeJson DashesSeparator where
+  encodeJson (DashesSeparator td)
+    = "title" := td.title
+   ~> "expanded-description" := td.expandedDescription
+   ~> "tags" := td.tags
+   ~> jsonEmptyObject
+
+instance decodeDashesSeparator :: DecodeJson DashesSeparator where
+  decodeJson json = do
+    obj <- decodeJson json
+    title <- obj .? "title"
+    expandedDescription <- obj .? "expanded-description"
+    tags <- obj .? "tags"
+    pure $ DashesSeparator { title, expandedDescription, tags }
+
+derive instance eqDashesSeparator :: Eq DashesSeparator
+
 -- TEST CASES
 
 basic :: String
@@ -141,30 +220,6 @@ title: Relax guy, I'm not hiding any BOMs
 ---
 """
 
-complexYaml :: String
-complexYaml = """---
-
-title: This is a title!
-
-name: Derek Worthen
-age: young
-contact:
-  email: email@domain.com
-  address: some location
-pets:
-- cat
-- dog
-- bat
-match: !!js/regexp /pattern/gim
-
-
-
----
-
-- item
-- item
-- item"""
-
 dashesSeparator :: String
 dashesSeparator = """---
 title: Three dashes marks the spot
@@ -172,7 +227,7 @@ tags:
   - yaml
   - front-matter
   - dashes
-expaned-description: with some --- crazy stuff in it
+expanded-description: with some --- crazy stuff in it
 ---
 
 don't break
@@ -188,30 +243,6 @@ description: Just an example of using `...`
 ...
 
 It shouldn't break with ..."""
-
-missingBody :: String
-missingBody = """---
-title: Three dashes marks the spot
-tags:
-  - yaml
-  - front-matter
-  - dashes
-expaned-description: with some --- crazy stuff in it
----
-"""
-
-noFrontMatter :: String
-noFrontMatter = """# Hello World
-
-This is a markdown document.
-
----
-
-Some text here that is definitely not front matter.
-
----
-
-More text here."""
 
 wrappedText :: String
 wrappedText = """---
